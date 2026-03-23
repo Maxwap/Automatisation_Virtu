@@ -1,0 +1,17 @@
+# --- Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfvars.json
+
+# --- Secrets ---
+credentials.auto.tfvars
+
+# --- Ansible ---
+*.retry
+inventory.ini
+
+# --- Système ---
+.env
+.DS_Store
