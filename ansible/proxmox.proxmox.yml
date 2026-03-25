@@ -14,5 +14,4 @@ keyed_groups:
     separator: ""
 
 compose:
-  # 🔥 On cible spécifiquement 'eth0' comme vu sur ta capture d'écran !
-  ansible_host: proxmox_network_interfaces['eth0']['ip'][0].split('/')[0]
+  ansible_host: proxmox_agent_interfaces[0].ip_addresses[0]

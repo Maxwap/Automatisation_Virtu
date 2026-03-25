@@ -1,0 +1,14 @@
+---
+- name: "Installer PostgreSQL et python3-psycopg2"
+  ansible.builtin.apt:
+    name:
+      - postgresql-16
+      - python3-psycopg2
+    state: present
+    update_cache: yes
+
+- name: "Configurer la réplication et pg_hba.conf"
+  # Colle ici tes anciennes tâches de configuration de la réplication...
+  # (les templates de pg_hba.conf et postgresql.conf que tu as fait passer précédemment)
+  ansible.builtin.debug:
+    msg: "Ici se trouvent tes tâches de réplication validées précédemment"
