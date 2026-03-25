@@ -4,19 +4,45 @@ resource "proxmox_vm_qemu" "ma_vm_test" {
   vmid        = 9001
   pool        = "Virtu"
 
-  clone      = "template-debian-12" 
+  clone      = "debian12-cloud"
   full_clone = true
 
-  cpu { cores = 1 }
-  memory = 1024 
+  cpu {
+    cores = 2
+    type  = "host"
+  }
+  memory = 2048 
 
-  os_type   = "cloud-init" 
-  
-  
+  os_type = "cloud-init" 
+
+  # 🔥 ON PASSE LE STOCKAGE EN VIRTIO 🔥
+  disks {
+    virtio {
+      virtio0 {
+        disk {
+          size    = "20G"
+          storage = "local-lvm"
+        }
+      }
+    }
+    ide {
+      ide2 {
+        cloudinit {
+          storage = "local-lvm"
+        }
+      }
+    }
+  }
+
+  network {
+    id     = 0
+    model  = "virtio"
+    bridge = "vmbr0"
+  }
+
   ipconfig0 = "ip=10.0.10.100/24,gw=10.0.10.254" 
 
-  # Injection de ta clé SSH depuis tes variables masquées
   sshkeys = <<EOF
-  ${var.ssh_public_key}
-  EOF
+${var.ssh_public_key}
+EOF
 }
