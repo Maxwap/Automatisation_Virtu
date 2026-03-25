@@ -1,15 +1,18 @@
-variable "proxmox_api_url" {
-  description = "URL de l'API Proxmox VE"
+variable "ssh_public_key" {
+  description = "Clé SSH publique injectée par Cloud-Init dans la VM"
   type        = string
+}
+
+# Ajoute aussi celles-ci si tu les utilises dans ton provider.tf
+variable "proxmox_api_url" {
+  type = string
 }
 
 variable "proxmox_api_token_id" {
-  description = "ID du Token API Proxmox"
-  type        = string
+  type = string
 }
 
 variable "proxmox_api_token_secret" {
-  description = "Secret du Token API Proxmox"
-  type        = string
-  sensitive   = true
+  type      = string
+  sensitive = true
 }
