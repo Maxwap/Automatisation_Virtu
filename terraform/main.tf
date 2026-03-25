@@ -1,6 +1,6 @@
 resource "proxmox_vm_qemu" "ma_vm_test" {
   name        = "debian-test-01"
-  target_node = "pve" 
+  target_node = "pve-O1" 
   vmid        = 9001
 
   clone      = "template-debian-13" 
