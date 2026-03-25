@@ -1,0 +1,28 @@
+---
+- name: "Initialisation des Slaves PostgreSQL"
+  hosts: db_slaves
+  become: true
+
+  vars:
+    master_ip: "10.0.10.101" # 👈 Vérifie que c'est bien l'IP de ton pg-master
+
+  tasks:
+    - name: "Arrêter PostgreSQL sur les Slaves avant synchronisation"
+      ansible.builtin.service:
+        name: postgresql
+        state: stopped
+
+    - name: "Supprimer les données locales existantes du Slave"
+      ansible.builtin.file:
+        path: /var/lib/postgresql/16/main
+        state: absent
+
+    - name: "Cloner les données du Master avec pg_basebackup"
+      ansible.builtin.command: >
+        sudo -u postgres pg_basebackup -h {{ master_ip }} -U postgres -D /var/lib/postgresql/16/main -P -Fp -Xstream -R
+      # Le drapeau -R crée automatiquement le fichier standby.signal et configure la connexion !
+
+    - name: "Démarrer PostgreSQL sur les Slaves"
+      ansible.builtin.service:
+        name: postgresql
+        state: started

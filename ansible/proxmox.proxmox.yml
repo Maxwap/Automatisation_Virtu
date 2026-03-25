@@ -1,0 +1,18 @@
+plugin: community.proxmox.proxmox
+
+url: "{{ lookup('env', 'PROXMOX_URL') }}"
+user: "{{ lookup('env', 'PROXMOX_USER') }}"
+token_id: "{{ lookup('env', 'PROXMOX_TOKEN_ID') }}"
+token_secret: "{{ lookup('env', 'PROXMOX_TOKEN_SECRET') }}"
+validate_certs: false
+
+want_vms: true
+want_proxmox_nodes_info: false
+
+keyed_groups:
+  - key: name
+    separator: ""
+
+compose:
+  # 🔥 On cible spécifiquement 'eth0' comme vu sur ta capture d'écran !
+  ansible_host: proxmox_network_interfaces['eth0']['ip'][0].split('/')[0]

@@ -14,11 +14,13 @@ resource "proxmox_vm_qemu" "vms" {
   target_node = each.value.node
   pool        = "Virtu"
 
-  clone      = "template-debian13" # 🎯 Ton vrai nom de template !
+  clone      = "template13" # 🎯 Ton vrai nom de template !
   full_clone = true
 
   # 🎯 On force le boot sur le disque SCSI qu'on va créer en dessous
   boot = "order=scsi0"
+
+  agent = 1
 
   cpu {
     cores = each.value.cores
@@ -52,6 +54,7 @@ resource "proxmox_vm_qemu" "vms" {
     id     = 0 
     model  = "virtio"
     bridge = "vmbr0"
+    tag= "10"
   }
 
   ipconfig0 = "ip=${each.value.ip}/24,gw=10.0.10.254"

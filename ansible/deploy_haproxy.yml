@@ -1,0 +1,33 @@
+---
+- name: "Déploiement de HAProxy"
+  hosts: loadbalancer
+  become: true
+
+  tasks:
+    - name: "Mettre à jour le cache APT"
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: "Installer HAProxy"
+      ansible.builtin.apt:
+        name: haproxy
+        state: present
+
+    - name: "Déployer la configuration HAProxy"
+      ansible.builtin.template:
+        src: templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        mode: '0644'
+      notify: Redémarrer HAProxy
+
+    - name: "S'assurer que HAProxy est démarré"
+      ansible.builtin.service:
+        name: haproxy
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Redémarrer HAProxy
+      ansible.builtin.service:
+        name: haproxy
+        state: restarted

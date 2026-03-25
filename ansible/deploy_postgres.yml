@@ -1,0 +1,42 @@
+---
+- name: "Installation de PostgreSQL 16 sur le Cluster (Debian 13)"
+  hosts: database
+  become: true
+
+  tasks:
+    - name: "Mettre à jour le cache APT"
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: "Installer les dépendances nécessaires"
+      ansible.builtin.apt:
+        name:
+          - curl
+          - ca-certificates
+          - gnupg
+        state: present
+
+    - name: "Ajouter la clé du dépôt officiel PostgreSQL"
+      ansible.builtin.get_url:
+        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        dest: /etc/apt/trusted.gpg.d/postgresql.asc
+        mode: '0644'
+
+    - name: "Ajouter le dépôt PostgreSQL 16 pour Debian 13 (Trixie)"
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/trusted.gpg.d/postgresql.asc] http://apt.postgresql.org/pub/repos/apt/ trixie-pgdg main"
+        state: present
+        filename: pgdg
+
+    - name: "Installer PostgreSQL 16 uniquement"
+      ansible.builtin.apt:
+        name:
+          - postgresql-16
+        state: present
+        update_cache: yes
+
+    - name: "Vérifier que PostgreSQL 16 est démarré"
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+        enabled: yes
