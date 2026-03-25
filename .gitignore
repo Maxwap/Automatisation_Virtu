@@ -7,6 +7,7 @@
 
 # --- Secrets ---
 credentials.auto.tfvars
+.vault_pass
 
 # --- Ansible ---
 *.retry

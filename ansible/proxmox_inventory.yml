@@ -1,0 +1,19 @@
+plugin: community.general.proxmox
+url: "{{ vault_proxmox_url }}"
+user: "{{ vault_proxmox_user }}"
+token_id: "{{ vault_proxmox_token_id }}"
+token_secret: "{{ vault_proxmox_token_secret }}"
+validate_certs: false
+
+want_vms: true
+want_proxmox_nodes_info: false
+
+# On regroupe par le nom de la VM donné par Terraform
+keyed_groups:
+  - key: name
+    separator: ""
+
+# On récupère l'adresse IP de l'interface 'net0' injectée par Cloud-init
+compose:
+  ansible_host: proxmox_network_interfaces['net0']['ip'].split('/')[0]
+  ansible_user: "debian" # Utilisateur SSH par défaut de ton template
