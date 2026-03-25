@@ -11,7 +11,7 @@ resource "proxmox_vm_qemu" "ma_vm_test" {
   memory = 1024 
 
   os_type   = "cloud-init" 
-  cloudinit_cdrom_storage = "local-lvm"
+  
   
   ipconfig0 = "ip=10.0.10.100/24,gw=10.0.10.254" 
 
