@@ -1,12 +1,12 @@
 ---
 - name: "Déploiement du Cluster PostgreSQL"
-  hosts: postgresql # Ciblera tes 3 VMs BDD automatiquement
+  hosts: postgresql # Cible les 3 VMs BDD automatiquement
   become: true
   roles:
     - postgresql # Appelle le rôle postgresql
 
 - name: "Déploiement du Load Balancer"
-  hosts: loadbalancer # Ciblera ta VM HAProxy
+  hosts: loadbalancer # Cible la VM HAProxy
   become: true
   roles:
     - haproxy # Appelle le rôle haproxy
