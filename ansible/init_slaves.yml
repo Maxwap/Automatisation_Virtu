@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    master_ip: "10.0.10.101" # 👈 Vérifie que c'est bien l'IP de ton pg-master
+    master_ip: "10.0.10.101" # Vérifie que c'est bien l'IP de pg-master
 
   tasks:
     - name: "Arrêter PostgreSQL sur les Slaves avant synchronisation"
