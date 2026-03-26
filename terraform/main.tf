@@ -14,10 +14,10 @@ resource "proxmox_vm_qemu" "vms" {
   target_node = each.value.node
   pool        = "Virtu"
 
-  clone      = "template13" # 🎯 Ton vrai nom de template !
+  clone      = "template13" # Nom de template !
   full_clone = true
 
-  # 🎯 On force le boot sur le disque SCSI qu'on va créer en dessous
+  # Forcer le boot sur le disque SCSI qu'on va créer en dessous
   boot = "order=scsi0"
 
   agent = 1
@@ -29,7 +29,7 @@ resource "proxmox_vm_qemu" "vms" {
   memory = each.value.ram
   os_type = "cloud-init"
 
-  # 🎯 On passe de virtio-block à SCSI (comme sur ta capture Proxmox !)
+  # Passe de virtio-block à SCSI
   scsihw = "virtio-scsi-pci"
 
   disks {
