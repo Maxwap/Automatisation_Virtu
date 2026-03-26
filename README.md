@@ -1,27 +1,24 @@
 
+# 🚀 Automatisation de l'Infrastructure PostgreSQL Haute Disponibilité (HA) sur Proxmox VE
 
-````
-# 🚀 Automatisation de l'infrastructure Debian 13 sur Proxmox VE
-
-Ce dépôt contient la documentation et le code Terraform pour créer un modèle (Template) Debian 13 et déployer automatiquement des machines virtuelles via Cloud-Init.
+Ce dépôt contient l'automatisation complète pour déployer un cluster de bases de données **PostgreSQL 16/17** hautement disponible, géré par **HAProxy** sur un environnement **Proxmox VE** en combinant Terraform, Ansible et Cloud-Init.
 
 ---
 
-## 🛠️ Partie 1 : Création du Template Proxmox (ID 900)
+## 🛠️ Partie 1 : Création du Template Debian 13 (ID 9000) sur Proxmox
 
-Exécutez ces commandes en SSH sur votre nœud Proxmox (`pve-01`).
+Exécutez ces commandes en SSH directement sur votre nœud Proxmox (`pve-01`).
 
 ### 1.1 Prérequis
-Installez l'outil `libguestfs-tools` pour modifier l'image sans l'allumer.
-
+Installez l'outil de customisation d'images disque :
 ```bash
 apt update
 apt install -y libguestfs-tools
 ````
 
-### 1.2 Téléchargement et Personnalisation de l'image
+### 1.2 Téléchargement et Personnalisation de l'image Cloud
 
-Nous allons télécharger l'image Cloud officielle et injecter le paquet `qemu-guest-agent`.
+Nous téléchargeons l'image officielle Debian 13 Generic Cloud et injectons le `qemu-guest-agent` (nécessaire pour remonter l'adresse IP à l'interface Proxmox).
 
 Bash
 
@@ -37,107 +34,65 @@ virt-customize -a debian-13-genericcloud-amd64.qcow2 \
   --run-command "systemctl enable qemu-guest-agent"
 ```
 
-### 1.3 Déploiement de la VM Template dans Proxmox
-
-Création de la structure de la VM, importation du disque et liaison du lecteur Cloud-Init.
+### 1.3 Déploiement du Template Proxmox
 
 Bash
 
 ```
-# 1. Créer la VM (ID 900, Nom template13, 2 Cores, 2Go RAM, Activation Agent)
-qm create 900 --name "template13" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0 --agent 1
+# 1. Créer la VM (ID 9000, Nom template-debian13, 2 Cores, 2Go RAM)
+qm create 9000 --name "template-debian13" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0 --agent 1
 
 # 2. Importer le disque dans le stockage local (local-lvm)
-qm disk import 900 /tmp/debian-13-genericcloud-amd64.qcow2 local-lvm
+qm disk import 9000 /tmp/debian-13-genericcloud-amd64.qcow2 local-lvm
 
-# 3. Attacher le disque à la VM en tant que contrôleur scsi0
-qm set 900 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-900-disk-0
+# 3. Attacher le disque et configurer le boot
+qm set 9000 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
+qm set 9000 --ide2 local-lvm:cloudinit
+qm set 9000 --boot c --bootdisk scsi0
+qm set 9000 --vga std
 
-# 4. Ajouter le lecteur Cloud-Init (indispensable pour Terraform)
-qm set 900 --ide2 local-lvm:cloudinit
-
-# 5. Forcer le Boot sur le disque scsi0 et activer l'affichage VGA classique
-qm set 900 --boot c --bootdisk scsi0
-qm set 900 --vga std
-```
-
-### 1.4 Vérification et Conversion en Template
-
-Bash
-
-```
-# Allumer la VM pour test
-qm start 900
-```
-
-> **Vérification :** Allez dans l'interface Web de Proxmox > VM 900 > Onglet **Summary**. L'adresse IP locale doit remonter automatiquement (Preuve que le QEMU Agent fonctionne).
-
-Une fois validé, éteignez la machine et convertissez-la en Template :
-
-Bash
-
-```
-# Éteindre proprement la VM
-qm stop 900
-
-# Convertir en Template Proxmox
-qm template 900
-
-# Nettoyer le fichier temporaire
+# 4. Convertir en modèle (Template) et nettoyer
+qm template 9000
 rm /tmp/debian-13-genericcloud-amd64.qcow2
 ```
 
 ---
 
-## 🏗️ Partie 2 : Déploiement avec Terraform
+## 🏗️ Partie 2 : Déploiement des VM avec Terraform
 
-Une fois le Template `900` créé, utilisez Terraform depuis votre machine locale (`nico@Templates`) pour cloner et déployer vos machines.
+Depuis votre machine de déploiement (`Templates`), clonez le template `9000` pour créer vos serveurs (Master `10.0.10.101`, Slaves, et HAProxy `10.0.10.104`).
 
-### 2.1 Configuration du fichier `main.tf`
-
-Créez ou modifiez votre fichier `main.tf` en y injectant votre clé publique `id_ansible.pub`.
+### 2.1 Exemple de bloc `main.tf`
 
 Terraform
 
 ```
-resource "proxmox_virtual_environment_vm" "debian_vm" {
-  name      = "debian13-prod"
+resource "proxmox_virtual_environment_vm" "pg_master" {
+  name      = "pg-master"
   node_name = "pve-01"
-  vm_id     = 104 # ID de la nouvelle VM à créer
+  vm_id     = 101 # ID attribué sur Proxmox
 
-  # On clone notre template 900
   clone {
-    vm_id = 900
+    vm_id = 9000 # ID du Template créé plus haut
   }
 
   initialization {
     ip_config {
       ipv4 {
-        address = "10.0.10.104/24"
-        gateway = "10.0.10.1" # Mettez votre passerelle réelle
+        address = "10.0.10.101/24"
+        gateway = "10.0.10.1"
       }
     }
 
     user_account {
       username = "debian"
-      # On injecte la clé id_ansible.pub récupérée via : cat ~/.ssh/id_ansible.pub
-      keys     = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8OyAEo7WzXm7V3rjnl9J6FH5Zi8sBU5kNZQn9XkFmQ nico@Templates"]
+      keys     = ["VOTRE_CLE_PUBLIQUE_SSH_ICI"] # Contenu de ~/.ssh/id_ansible.pub
     }
-  }
-
-  cpu {
-    cores = 2
-  }
-
-  memory {
-    dedicated = 2048
   }
 }
 ```
 
-### 2.2 Déploiement
-
-Lancez les commandes Terraform pour appliquer la configuration :
+### 2.2 Exécution de Terraform
 
 Bash
 
@@ -147,12 +102,51 @@ terraform plan
 terraform apply
 ```
 
-### 2.3 Connexion SSH à la nouvelle machine
+---
 
-Comme la clé par défaut (`id_rsa`) n'existe pas chez vous, forcez SSH à utiliser votre clé `id_ansible` pour vous connecter :
+## ⚙️ Partie 3 : Provisioning et Configuration Logicielle avec Ansible
+
+Une fois les VM démarrées, Ansible prend le relais pour configurer PostgreSQL, la réplication Streaming et le Load Balancing.
+
+### 3.1 Architecture du projet Ansible
+
+Notre dossier Ansible est structuré de la manière suivante :
+
+- `inventory.ini` : Contient les IP de nos machines (Master, Slaves, HAProxy).
+    
+- `deploy_cluster.yml` : Le Playbook principal qui appelle nos rôles.
+    
+- `roles/` : Contient la logique d'installation.
+    
+
+### 3.2 L'inventaire (`inventory.ini`)
+
+Ini, TOML
+
+```
+[master]
+pg-master ansible_host=10.0.10.101 ansible_user=debian
+
+[slaves]
+pg-slave-1 ansible_host=10.0.10.102 ansible_user=debian
+pg-slave-2 ansible_host=10.0.10.103 ansible_user=debian
+
+[haproxy]
+balancer ansible_host=10.0.10.104 ansible_user=debian
+```
+
+### 3.3 Lancement du déploiement Ansible
 
 Bash
 
 ```
-ssh -i ~/.ssh/id_ansible debian@10.0.10.104
+ansible-playbook -i inventory.ini deploy_cluster.yml --private-key=~/.ssh/id_ansible
 ```
+
+### ✅ Actions automatisées par Ansible :
+
+- **Sur le Master & les Slaves :** Installation de PostgreSQL 16/17, ouverture des connexions réseaux externes.
+    
+- **Sur les Slaves :** Initialisation de la réplication à chaud (Streaming Replication).
+    
+- **Sur le HAProxy :** Routage du trafic vers le Master sain avec tests de santé applicatifs (Health Checks).
